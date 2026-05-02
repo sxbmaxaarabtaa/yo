@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tic-Tac-Toe | Curry vs Ronaldo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800;900&family=JetBrains+Mono:wght@400;600;900&family=Dancing+Script:wght@600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0a0a0c;
+  --surface:#13131a;
+  --surface2:#1a1a24;
+  --border:#252530;
+  --gold:#ffc72c;
+  --gold2:#d4af37;
+  --text:#e8e8f0;
+  --muted:#5a5a72;
+  --radius:14px;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Syne',sans-serif;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 50%,rgba(255,199,44,0.07) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 50%,rgba(245,245,245,0.04) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
+  animation:breathe 6s ease-in-out infinite alternate;
+}
+@keyframes breathe{from{opacity:0.6}to{opacity:1}}
+
+.screen{
+  display:none;position:absolute;
+  width:100%;height:100%;
+  align-items:center;justify-content:center;
+  z-index:1;animation:fadeUp 0.35s ease;
+}
+.screen.active{display:flex}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:40px 36px;
+  width:100%;max-width:430px;
+  text-align:center;
+  display:flex;flex-direction:column;
+  align-items:center;gap:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+
+h1{
+  font-size:2.6rem;font-weight:900;letter-spacing:-1.5px;
+  background:linear-gradient(135deg,#ffc72c 0%,#fff 60%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;line-height:1.1;
+}
+h2{font-size:1.7rem;font-weight:800}
+.subtitle{color:var(--muted);font-size:0.88rem;letter-spacing:0.5px}
+
+/* SCORE BAR */
+.score-bar{
+  display:flex;align-items:center;
+  width:100%;border-radius:12px;
+  overflow:hidden;border:1px solid var(--border);
+}
+.score-side{flex:1;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.score-side.x-side{background:rgba(29,66,138,0.3)}
+.score-side.o-side{background:rgba(200,200,200,0.06)}
+.score-mid{
+  padding:10px 12px;background:var(--surface2);
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  border-left:1px solid var(--border);border-right:1px solid var(--border);
+}
+.score-num{font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:900}
+.score-label{font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.x-score{color:#ffc72c}.o-score{color:#fff}.draw-score{color:var(--muted)}
+
+/* LEGEND */
+.legend-row{display:flex;gap:30px;justify-content:center;align-items:center}
+.legend-item{display:flex;flex-direction:column;align-items:center;gap:8px}
+.legend-sym{font-size:0.95rem;font-weight:800}
+.x-sym{color:#ffc72c}.o-sym{color:#fff}
+
+/* MINI JERSEY */
+.mini-jersey{
+  width:68px;height:78px;
+  border-radius:5px 5px 8px 8px;
+  clip-path:polygon(18% 0%,82% 0%,100% 18%,100% 100%,0% 100%,0% 18%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:transform 0.2s;cursor:default;
+}
+.mini-jersey:hover{transform:scale(1.1) rotate(-3deg)}
+.mj-num{font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:900;line-height:1}
+.mj-name{font-size:0.35rem;font-weight:800;letter-spacing:2px;margin-top:2px}
+
+.curry-jersey{
+  background:linear-gradient(165deg,#1d428a 55%,#ffc72c 55%);
+  border:2px solid #ffc72c;box-shadow:0 4px 20px rgba(255,199,44,0.35);
+}
+.curry-jersey .mj-num,.curry-jersey .mj-name{color:#ffc72c}
+
+.ronaldo-jersey{
+  background:linear-gradient(165deg,#f5f5f5 55%,#d4af37 55%);
+  border:2px solid #d4af37;box-shadow:0 4px 20px rgba(245,245,245,0.18);
+}
+.ronaldo-jersey .mj-num,.ronaldo-jersey .mj-name{color:#1a1a1a}
+
+/* PLAYER OPT */
+.player-select-row{display:flex;gap:16px;width:100%}
+.player-opt{
+  flex:1;padding:20px 12px;background:var(--surface2);
+  border:2px solid var(--border);border-radius:14px;
+  cursor:pointer;transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.player-opt:hover{transform:translateY(-3px)}
+.player-opt.selected-x{border-color:#ffc72c;box-shadow:0 0 20px rgba(255,199,44,0.2)}
+.player-opt.selected-o{border-color:#d4af37;box-shadow:0 0 20px rgba(245,245,245,0.15)}
+.player-opt-label{font-size:0.75rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+
+/* BUTTONS */
+.btn-group{width:100%;display:flex;flex-direction:column;gap:12px}
+.btn{
+  width:100%;padding:14px;border:none;border-radius:10px;
+  font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;
+  cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;letter-spacing:0.5px;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.3)}
+.btn:active{transform:translateY(0)}
+.btn-x{background:#1d428a;color:#ffc72c;border:2px solid #ffc72c}
+.btn-o{background:#f0f0f0;color:#1a1a1a;font-weight:800}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);font-size:0.85rem;padding:10px}
+
+/* GAME SCREEN */
+#game{flex-direction:column;gap:16px;padding:20px;min-height:100vh;justify-content:center}
+
+.game-top{
+  display:flex;justify-content:space-between;
+  align-items:center;width:100%;max-width:340px;padding:0 4px;
+}
+.turn-badge{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:30px;padding:8px 16px;font-size:0.85rem;font-weight:700;
+}
+.turn-dot{width:10px;height:10px;border-radius:50%;animation:pulse 1s ease infinite}
+.turn-dot.x-dot{background:#ffc72c;box-shadow:0 0 8px #ffc72c}
+.turn-dot.o-dot{background:#fff;box-shadow:0 0 8px #fff}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+.score-mini{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:900;letter-spacing:2px;color:var(--muted)}
+.score-mini .xs{color:#ffc72c}.score-mini .os{color:#fff}
+
+.back-btn{
+  background:transparent;border:none;color:var(--muted);
+  font-family:'Syne',sans-serif;font-size:0.8rem;
+  cursor:pointer;letter-spacing:1px;transition:color 0.2s;padding:4px 8px;
+}
+.back-btn:hover{color:var(--text)}
+
+/* BOARD WRAPPER */
+.board-wrapper{position:relative;display:flex;align-items:center;justify-content:center;gap:16px}
+
+.watermark{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Dancing Script',cursive;font-size:1.1rem;
+  color:rgba(255,255,255,0.045);pointer-events:none;
+  white-space:nowrap;z-index:10;user-select:none;
+}
+
+/* SIDE JERSEYS */
+.board-jersey{display:flex;flex-direction:column;align-items:center}
+.bj-shirt{
+  width:70px;height:82px;
+  border-radius:5px 5px 10px 10px;
+  clip-path:polygon(18% 0%,82% 0%,100% 18%,100% 100%,0% 100%,0% 18%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;transition:transform 0.3s,box-shadow 0.3s;
+}
+.bj-shirt.active-jersey{transform:scale(1.12)}
+.bj-collar{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:22px;height:10px;border-radius:0 0 50% 50%;z-index:2;
+}
+.bj-num{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:900;line-height:1;margin-top:8px}
+.bj-name{font-size:0.37rem;font-weight:800;letter-spacing:2.5px;margin-top:2px}
+
+.curry-shirt{
+  background:linear-gradient(165deg,#1d428a 0%,#1d428a 50%,#ffc72c 50%);
+  border:2px solid #ffc72c;box-shadow:0 0 18px rgba(255,199,44,0.2);
+}
+.curry-shirt .bj-collar{background:#1d428a;border:2px solid #ffc72c}
+.curry-shirt .bj-num{color:#ffc72c;text-shadow:0 0 10px rgba(255,199,44,0.5)}
+.curry-shirt .bj-name{color:#ffc72c}
+.curry-shirt.active-jersey{box-shadow:0 0 30px rgba(255,199,44,0.5)}
+
+.ronaldo-shirt{
+  background:linear-gradient(165deg,#f8f8f8,#f0f0f0);
+  border:2px solid #d4af37;box-shadow:0 0 18px rgba(212,175,55,0.15);
+}
+.ronaldo-shirt .bj-collar{background:#f0f0f0;border:2px solid #d4af37}
+.ronaldo-shirt .bj-num{color:#1a1a1a}
+.ronaldo-shirt .bj-name{color:#555}
+.ronaldo-shirt.active-jersey{box-shadow:0 0 30px rgba(212,175,55,0.4)}
+
+/* BOARD */
+.board{
+  display:grid;
+  grid-template-columns:repeat(3,100px);
+  grid-template-rows:repeat(3,100px);
+  gap:7px;
+}
+.cell{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:900;
+  cursor:pointer;
+  transition:background 0.15s,transform 0.1s,border-color 0.15s,box-shadow 0.15s;
+  user-select:none;overflow:hidden;position:relative;
+}
+.cell:hover:not(.taken){background:#1e1e28;border-color:#3a3a50;transform:scale(1.06)}
+.cell.taken{cursor:default}
+.cell.x{
+  background:linear-gradient(135deg,#0e2147,#1d428a);
+  border-color:#ffc72c;box-shadow:inset 0 0 14px rgba(255,199,44,0.15);
+}
+.cell.x::after{
+  content:'30';font-family:'JetBrains Mono',monospace;
+  font-size:1.8rem;font-weight:900;color:#ffc72c;
+  text-shadow:0 0 14px rgba(255,199,44,0.7);
+}
+.cell.o{
+  background:linear-gradient(135deg,#e4e4e4,#f5f5f5);
+  border-color:#d4af37;box-shadow:inset 0 0 14px rgba(212,175,55,0.2);
+}
+.cell.o::after{
+  content:'7';font-family:'JetBrains Mono',monospace;
+  font-size:1.8rem;font-weight:900;color:#1a1a1a;
+}
+.cell.win-cell{animation:winPulse 0.6s ease forwards}
+.cell.x.win-cell{box-shadow:0 0 28px rgba(255,199,44,0.8),inset 0 0 14px rgba(255,199,44,0.3)}
+.cell.o.win-cell{box-shadow:0 0 28px rgba(212,175,55,0.7),inset 0 0 14px rgba(212,175,55,0.3)}
+@keyframes winPulse{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
+.cell.pop{animation:pop 0.28s cubic-bezier(0.175,0.885,0.32,1.275)}
+@keyframes pop{0%{transform:scale(0.4) rotate(-10deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+
+/* STATUS */
+.status-bar{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:30px;padding:10px 24px;font-size:0.92rem;font-weight:700;
+  min-width:200px;text-align:center;
+}
+
+/* RESULT */
+.result-icon{font-size:3.8rem;animation:dropIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275)}
+@keyframes dropIn{from{transform:scale(0) rotate(-20deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.winner-display{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  animation:popIn 0.45s cubic-bezier(0.175,0.885,0.32,1.275) 0.1s both;
+}
+@keyframes popIn{from{transform:scale(0.3) rotate(-12deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.result-jersey{width:100px;height:116px}
+.result-jersey .bj-num{font-size:2.6rem!important}
+.result-jersey .bj-name{font-size:0.5rem!important}
+.winner-name-label{font-size:0.82rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.result-sub{font-size:0.82rem;color:var(--muted)}
+
+/* TRASH TALK TOAST */
+.trash-talk{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:30px;padding:9px 22px;
+  font-size:0.82rem;color:#ff6b6b;font-weight:700;
+  z-index:100;opacity:0;transition:opacity 0.3s;
+  pointer-events:none;white-space:nowrap;
+}
+.trash-talk.show{opacity:1}
+
+@media(max-width:420px){
+  .board{grid-template-columns:repeat(3,86px);grid-template-rows:repeat(3,86px)}
+  .cell.x::after,.cell.o::after{font-size:1.5rem}
+  .bj-shirt{width:56px;height:66px}.bj-num{font-size:1.5rem}
+  .card{padding:28px 18px}
+  h1{font-size:2rem}
+  .board-wrapper{gap:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── MENU ── -->
+<div id="menu" class="screen active">
+  <div class="card">
+    <h1>Tic-Tac-Toe</h1>
+    <p class="subtitle">CURRY vs RONALDO · Pass &amp; Play</p>
+
+    <div class="legend-row">
+      <div class="legend-item">
+        <div class="mini-jersey curry-jersey">
+          <span class="mj-num">30</span>
+          <span class="mj-name">CURRY</span>
+        </div>
+        <span class="legend-sym x-sym">= X</span>
+      </div>
+      <div class="legend-item">
+        <div class="mini-jersey ronaldo-jersey">
+          <span class="mj-num">7</span>
+          <span class="mj-name">RONALDO</span>
+        </div>
+        <span class="legend-sym o-sym">= O</span>
+      </div>
+    </div>
+
+    <p style="color:var(--muted);font-size:0.8rem;letter-spacing:1px">WHO GOES FIRST?</p>
+    <div class="player-select-row">
+      <div class="player-opt selected-x" id="pickX" onclick="pickFirst('X')">
+        <div class="mini-jersey curry-jersey" style="width:54px;height:62px">
+          <span class="mj-num" style="font-size:1.3rem">30</span>
+          <span class="mj-name">CURRY</span>
+        </div>
+        <span class="player-opt-label">Goes First</span>
+      </div>
+      <div class="player-opt" id="pickO" onclick="pickFirst('O')">
+        <div class="mini-jersey ronaldo-jersey" style="width:54px;height:62px">
+          <span class="mj-num" style="font-size:1.3rem">7</span>
+          <span class="mj-name">RONALDO</span>
+        </div>
+        <span class="player-opt-label">Goes First</span>
+      </div>
+    </div>
+
+    <div class="score-bar" id="scoreBar" style="display:none">
+      <div class="score-side x-side">
+        <span class="score-num x-score" id="scoreX">0</span>
+        <span class="score-label">Curry</span>
+      </div>
+      <div class="score-mid">
+        <span class="score-num draw-score" id="scoreDraw">0</span>
+        <span class="score-label">Draw</span>
+      </div>
+      <div class="score-side o-side">
+        <span class="score-num o-score" id="scoreO">0</span>
+        <span class="score-label">Ronaldo</span>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-x" onclick="startGame()">🏀 Kick Off</button>
+    </div>
+    <p style="font-size:0.7rem;color:var(--muted)">Pass the phone between players · <em>Mohazan0</em></p>
+  </div>
+</div>
+
+<!-- ── GAME ── -->
+<div id="game" class="screen">
+  <div class="game-top">
+    <div class="turn-badge">
+      <div class="turn-dot x-dot" id="turnDot"></div>
+      <span id="turnLabel">Curry's Turn</span>
+    </div>
+    <div class="score-mini">
+      <span class="xs" id="gmX">0</span>
+      <span style="color:var(--border)"> – </span>
+      <span class="os" id="gmO">0</span>
+    </div>
+    <button class="back-btn" onclick="goMenu()">← Menu</button>
+  </div>
+
+  <div class="board-wrapper">
+    <div class="watermark"><em>Mohazan0</em></div>
+    <div class="board-jersey">
+      <div class="bj-shirt curry-shirt active-jersey" id="curryJ">
+        <div class="bj-collar"></div>
+        <div class="bj-num">30</div>
+        <div class="bj-name">CURRY</div>
+      </div>
+    </div>
+    <div id="board" class="board">
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
+    </div>
+    <div class="board-jersey">
+      <div class="bj-shirt ronaldo-shirt" id="ronaldoJ">
+        <div class="bj-collar"></div>
+        <div class="bj-num">7</div>
+        <div class="bj-name">RONALDO</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar">Pass the phone!</div>
+</div>
+
+<!-- ── RESULT ── -->
+<div id="result" class="screen">
+  <div class="card">
+    <div id="resultIcon" class="result-icon"></div>
+    <h2 id="resultText"></h2>
+    <div id="winnerDisplay" class="winner-display"></div>
+    <p class="result-sub" id="resultSub"></p>
+    <div class="btn-group" style="margin-top:6px">
+      <button class="btn btn-x" onclick="playAgain()">⚡ Play Again</button>
+      <button class="btn btn-ghost" onclick="goMenu()">← Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Trash Talk Toast -->
+<div class="trash-talk" id="trashTalk"></div>
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────────
+let board = Array(9).fill(null);
+let currentTurn = 'X';
+let firstPlayer = 'X';
+let gameActive = false;
+let scores = {X:0, O:0, D:0};
+let hasPlayed = false;
+let wasLosing = false;
+
+const COMBOS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+// ── AUDIO ─────────────────────────────────────────────────────────────
+let audioCtx = null;
+function getAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function tone(freq,type,dur,vol,delay=0){
+  try{
+    const ctx=getAudio(), o=ctx.createOscillator(), g=ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type=type;
+    o.frequency.setValueAtTime(freq,ctx.currentTime+delay);
+    g.gain.setValueAtTime(vol,ctx.currentTime+delay);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+dur);
+    o.start(ctx.currentTime+delay);
+    o.stop(ctx.currentTime+delay+dur);
+  }catch(e){}
+}
+function playClick(){ tone(520,'sine',0.1,0.25); tone(280,'sine',0.08,0.1,0.04); }
+function playWin(){ [523,659,784,1047].forEach((f,i)=>tone(f,'triangle',0.25,0.3,i*0.12)); }
+function playLose(){ [400,320,240].forEach((f,i)=>tone(f,'sawtooth',0.2,0.2,i*0.15)); }
+function playDraw(){ [0,0.2,0.4].forEach(t=>tone(440,'sine',0.1,0.18,t)); }
+function playTrash(){ [0,0.14].forEach(t=>tone(160,'square',0.1,0.15,t)); }
+
+// ── SCREENS ───────────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── PICK FIRST ────────────────────────────────────────────────────────
+function pickFirst(sym){
+  firstPlayer = sym;
+  document.getElementById('pickX').className='player-opt'+(sym==='X'?' selected-x':'');
+  document.getElementById('pickO').className='player-opt'+(sym==='O'?' selected-o':'');
+}
+
+// ── START ─────────────────────────────────────────────────────────────
+function startGame(){
+  board=Array(9).fill(null);
+  currentTurn=firstPlayer;
+  gameActive=true;
+  wasLosing=false;
+  document.querySelectorAll('.cell').forEach(c=>{c.className='cell';});
+  updateTurnUI();
+  updateScoreMini();
+  showScreen('game');
+}
+
+function goMenu(){
+  gameActive=false;
+  if(hasPlayed){
+    document.getElementById('scoreBar').style.display='flex';
+    document.getElementById('scoreX').textContent=scores.X;
+    document.getElementById('scoreO').textContent=scores.O;
+    document.getElementById('scoreDraw').textContent=scores.D;
+  }
+  showScreen('menu');
+}
+
+function playAgain(){
+  // Alternate who starts
+  firstPlayer=firstPlayer==='X'?'O':'X';
+  pickFirst(firstPlayer);
+  startGame();
+}
+
+// ── CELL CLICK ────────────────────────────────────────────────────────
+document.querySelectorAll('.cell').forEach(cell=>{
+  cell.addEventListener('click',()=>{
+    if(!gameActive) return;
+    const i=parseInt(cell.dataset.index);
+    if(board[i]) return;
+
+    playClick();
+    board[i]=currentTurn;
+    cell.classList.add('taken',currentTurn.toLowerCase(),'pop');
+
+    const result=checkWinner();
+    if(result){
+      gameActive=false;
+      highlightWin(result.combo);
+      setTimeout(()=>showResult('win',result.sym),700);
+      return;
+    }
+    if(board.every(v=>v)){
+      gameActive=false;
+      setTimeout(()=>showResult('draw',null),500);
+      return;
+    }
+
+    currentTurn=currentTurn==='X'?'O':'X';
+    updateTurnUI();
+    checkTrash();
+  });
+});
+
+// ── WIN CHECK ─────────────────────────────────────────────────────────
+function checkWinner(){
+  for(const [a,b,c] of COMBOS)
+    if(board[a]&&board[a]===board[b]&&board[a]===board[c])
+      return {sym:board[a],combo:[a,b,c]};
+  return null;
+}
+
+function highlightWin(combo){
+  combo.forEach(i=>{
+    document.querySelector(`.cell[data-index="${i}"]`).classList.add('win-cell');
+  });
+}
+
+// ── TURN UI ───────────────────────────────────────────────────────────
+function updateTurnUI(){
+  const isX=currentTurn==='X';
+  document.getElementById('turnDot').className='turn-dot '+(isX?'x-dot':'o-dot');
+  document.getElementById('turnLabel').textContent=isX?"Curry's Turn 🏀":"Ronaldo's Turn ⚽";
+  const sb=document.getElementById('statusBar');
+  sb.style.color=isX?'#ffc72c':'#d4af37';
+  sb.textContent=isX?'Pass the phone to CURRY! 🏀':'Pass the phone to RONALDO! ⚽';
+  document.getElementById('curryJ').classList.toggle('active-jersey',isX);
+  document.getElementById('ronaldoJ').classList.toggle('active-jersey',!isX);
+}
+
+function updateScoreMini(){
+  document.getElementById('gmX').textContent=scores.X;
+  document.getElementById('gmO').textContent=scores.O;
+}
+
+// ── TRASH TALK ────────────────────────────────────────────────────────
+const TRASH = {
+  X:["lock in brev 💀","u ain't shihh bruh 😭","nah u tweakin 🤣","bro is cooked 🍳","Ronaldo said siuuu on ur board 💀"],
+  O:["Curry built different 🏀","u faded brev 😂","no cap u done 🔥","bro is tweakin fr 💀","30 gonna cook u 😤"]
+};
+
+function checkTrash(){
+  const opp=currentTurn==='X'?'O':'X';
+  const losing=COMBOS.some(([a,b,c])=>{
+    const l=[board[a],board[b],board[c]];
+    return l.filter(v=>v===opp).length===2&&l.includes(null);
+  });
+  if(losing&&!wasLosing){
+    playTrash();
+    const arr=TRASH[currentTurn];
+    showToast(arr[Math.floor(Math.random()*arr.length)]);
+  }
+  wasLosing=losing;
+}
+
+function showToast(msg){
+  const el=document.getElementById('trashTalk');
+  el.textContent=msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ── RESULT ────────────────────────────────────────────────────────────
+function showResult(type,sym){
+  hasPlayed=true;
+  const icon=document.getElementById('resultIcon');
+  const text=document.getElementById('resultText');
+  const display=document.getElementById('winnerDisplay');
+  const sub=document.getElementById('resultSub');
+  display.innerHTML='';
+
+  if(type==='draw'){
+    playDraw();
+    icon.textContent='🤝';
+    text.textContent="It's a Draw!";
+    scores.D++;
+    display.innerHTML=`
+      <div style="display:flex;gap:14px;align-items:center">
+        ${jerseyHTML('curry')}
+        <span style="color:var(--muted);font-weight:900;font-size:1.2rem">VS</span>
+        ${jerseyHTML('ronaldo')}
+      </div>`;
+    sub.textContent='Nobody wins today 🤷';
+  } else if(sym==='X'){
+    playWin();
+    scores.X++;
+    icon.textContent='🏆';
+    text.textContent='LETS GOOO CURRY!!';
+    display.innerHTML=jerseyHTML('curry','result-jersey')+'<p class="winner-name-label">Steph Curry #30 🏀</p>';
+    sub.textContent='Ronaldo said nothing 😭';
+  } else {
+    playWin();
+    scores.O++;
+    icon.textContent='🏆';
+    text.textContent='SIUUUUU RONALDO!!';
+    display.innerHTML=jerseyHTML('ronaldo','result-jersey')+'<p class="winner-name-label">Cristiano Ronaldo #7 ⚽</p>';
+    sub.textContent='Curry went home 💀';
+  }
+
+  document.getElementById('scoreX').textContent=scores.X;
+  document.getElementById('scoreO').textContent=scores.O;
+  document.getElementById('scoreDraw').textContent=scores.D;
+  document.getElementById('scoreBar').style.display='flex';
+  showScreen('result');
+}
+
+function jerseyHTML(player,extra=''){
+  if(player==='curry') return `<div class="bj-shirt curry-shirt ${extra}"><div class="bj-collar"></div><div class="bj-num">30</div><div class="bj-name">CURRY</div></div>`;
+  return `<div class="bj-shirt ronaldo-shirt ${extra}"><div class="bj-collar"></div><div class="bj-num">7</div><div class="bj-name">RONALDO</div></div>`;
+}
+</script>
+</body>
+</html>
